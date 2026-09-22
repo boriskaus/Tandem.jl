@@ -119,7 +119,12 @@ bound them with `-ts_max_steps` unless you mean to run the whole sequence):
 | `tandem/2d/BP6/bp6_A`, `bp6_S` | SEAS BP6: fluid-injection-induced aseismic slip, at 250 m and 50 m fault resolution |
 | `tandem/3d/bp5` | SEAS BP5: 3D rate-and-state fault with a velocity-strengthening border |
 | `tandem/3d/tpv102` | SCEC dynamic-rupture benchmark TPV102, run quasi-dynamically |
-| `tandem/2d/mms1`, `mms3`, `tandem/3d/mms5` | Manufactured solutions, for verifying convergence rates |
+| `tandem/2d/mms1`, `mms3`, `tandem/3d/mms5`, `3d/plane_wave` | Manufactured solutions, for verifying convergence rates |
+
+> The 3D benchmarks **BP5** and **TPV102** are large: most of their cost is mesh partitioning
+> and operator assembly, which `-ts_max_steps` does not bound, so even a two-step run takes
+> well over half an hour on one core. They are meant for `ranks = 10` and upwards. The 2D
+> benchmarks and the manufactured solutions run in seconds to minutes.
 
 **Static problems** (`app = :static`): `poisson/` and `elasticity/` hold manufactured
 solutions (`cosine`, `manufactured`), embedded-boundary and singular cases, and geometry-driven
