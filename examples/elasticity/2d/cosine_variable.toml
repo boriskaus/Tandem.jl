@@ -1,0 +1,15 @@
+resolution = 0.125
+type = "elasticity"
+lib = "cosine_variable.lua"
+scenario = "cosine_variable"
+
+[generate_mesh]
+intercepts = [
+    [0, 1],
+    [0, 1]
+]
+bcs = [
+    [{bc = "d", plane = 0}, {bc = "d", plane = 1}],
+    [{bc = "d", plane = 0}, {bc = "d", plane = 1}]
+]
+

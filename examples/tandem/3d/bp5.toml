@@ -1,0 +1,26 @@
+final_time = 56764800000
+mesh_file = "bp5.msh"
+lib = "bp5.lua"
+scenario = "bp5_outside"
+mode = "QD"
+type = "elasticity"
+ref_normal = [0, -1, 0]
+boundary_linear = true
+mg_strategy = "logarithmic"
+matrix_free = true
+
+[fault_probe_output]
+prefix = "fltst_"
+t_max = 9460800
+probes = [
+    { name = "strk-36dp+00", x = [-36, 0,   0] },
+    { name = "strk-16dp+00", x = [-16, 0,   0] },
+    { name = "strk+00dp+00", x = [  0, 0,   0] },
+    { name = "strk+16dp+00", x = [ 16, 0,   0] },
+    { name = "strk+36dp+00", x = [ 36, 0,   0] },
+    { name = "strk-24dp+10", x = [-24, 0, -10] },
+    { name = "strk-16dp+10", x = [-16, 0, -10] },
+    { name = "strk+00dp+10", x = [  0, 0, -10] },
+    { name = "strk+16dp+10", x = [ 16, 0, -10] },
+    { name = "strk+00dp+22", x = [  0, 0, -22] }
+]

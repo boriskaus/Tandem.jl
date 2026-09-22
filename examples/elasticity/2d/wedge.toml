@@ -1,0 +1,6 @@
+mesh_file = "wedge.msh"
+output = "wedge"
+type = "elasticity"
+lib = "wedge.lua"
+scenario = "wedge"
+

@@ -1,0 +1,17 @@
+resolution = 0.125
+type = "elasticity"
+lib = "beam.lua"
+scenario = "beam"
+
+[generate_mesh]
+intercepts = [
+    [0, 1],
+    [0, 0.2],
+    [0, 0.2]
+]
+bcs = [
+    [{bc = "d", plane = 0}, {bc = "n", plane = 1}],
+    [{bc = "n", plane = 0}, {bc = "n", plane = 1}],
+    [{bc = "n", plane = 0}, {bc = "n", plane = 1}]
+]
+

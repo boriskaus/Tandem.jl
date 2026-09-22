@@ -1,0 +1,15 @@
+resolution = 0.125
+type = "poisson"
+lib = "manufactured.lua"
+scenario = "manufactured"
+
+[generate_mesh]
+intercepts = [
+    [0, 1],
+    [0, 1]
+]
+bcs = [
+    [{bc = "d", plane = 0}, {bc = "d", plane = 1}],
+    [{bc = "d", plane = 0}, {bc = "d", plane = 1}]
+]
+

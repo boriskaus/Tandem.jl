@@ -1,0 +1,24 @@
+name = "Tandem"
+uuid = "ce696df9-00dc-4603-845b-ef664a13472b"
+authors = ["Boris Kaus <kaus@uni-mainz.de>"]
+version = "0.1.0"
+
+[deps]
+OpenBLAS32_jll = "656ef2d0-ae68-5445-9ca0-591084a874a2"
+Tandem_jll = "992e12d1-d328-585c-a8a3-e9ddf32e7ce7"
+gmsh_jll = "630162c2-fc9b-58b3-9910-8442a8a132e6"
+
+[sources]
+Tandem_jll = {url = "https://github.com/boriskaus/Tandem_jll.jl"}
+
+[compat]
+OpenBLAS32_jll = "0.3"
+Tandem_jll = "1.2"
+gmsh_jll = "4"
+julia = "1.12"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

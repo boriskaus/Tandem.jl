@@ -1,0 +1,5 @@
+mesh_file = "dip.msh"
+type = "elasticity"
+lib = "dip.lua"
+scenario = "dip_60"
+ref_normal = [1, 0]

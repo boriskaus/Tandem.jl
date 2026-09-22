@@ -1,0 +1,5 @@
+mesh_file = "embedded_half.msh"
+type = "poisson"
+lib = "embedded_half.lua"
+scenario = "embedded_half"
+ref_normal = [1, 0]
