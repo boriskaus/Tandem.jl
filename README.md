@@ -74,9 +74,10 @@ r.l2_error     # 3.2e-5
 | `run_static(config; …)` | Run the static elliptic solver (`static`) on a TOML parameter file. |
 | `run_model(config; app, …)` | The common implementation behind both; pick the app explicitly. |
 | `run_example(name; …)` | Prepare and run one of the bundled examples. |
-| `list_examples()` / `example(name)` | The bundled examples and how each one gets its mesh. |
-| `prepare(name; dir)` | Copy an example into a working directory and build its mesh, without running. |
+| `list_examples()` / `Tandem.example(name)` | The bundled examples and how each one gets its mesh. |
+| `Tandem.prepare(name; dir)` | Copy an example into a working directory and build its mesh, without running. |
 | `Tandem.generate_mesh(geo; …)` | Build a `.msh` from a gmsh `.geo` file. |
+| `Tandem.gmsh_executable()` | The gmsh binary used for OpenCASCADE geometries. |
 | `Tandem.examples_dir()` | Path to the bundled copy of tandem's `examples/`. |
 | `Tandem.executable(app, dim, degree)` | Path to one of the 12 binaries, for direct use. |
 
@@ -130,11 +131,18 @@ geometry to build one from. `Tandem.runnable(e)` reports this.
 ## Notes
 
 * **Meshes.** Examples whose TOML has a `[generate_mesh]` block need no mesh step — tandem
-  builds the mesh itself. The rest are meshed from a gmsh `.geo`, which `prepare` and
+  builds the mesh itself. The rest are meshed from a gmsh `.geo`, which `Tandem.prepare` and
   `run_example` do for you. `generate_mesh` writes MSH 2.2, the format tandem parses.
-* **gmsh.** gmsh is driven through its library API in-process rather than as an executable.
-  gmsh_jll 4.10 and newer require HDF5_jll < 2 while `Tandem_jll` requires ≥ 2.2.2, so the only
-  version that can share an environment is 4.9.3, which ships `libgmsh` but no `gmsh` binary.
+  `Tandem.prepare` also creates every directory named by an output `prefix` in the parameter
+  file, which tandem validates before it will start.
+* **gmsh.** Most geometries are meshed through the gmsh library in-process. Six use gmsh's
+  **OpenCASCADE** kernel — including the 3D benchmarks BP5 and TPV102 — which the loadable
+  version lacks: gmsh_jll 4.10 and newer require HDF5_jll < 2 while `Tandem_jll` requires
+  ≥ 2.2.2, leaving only 4.9.3, built without OCC. For those, a current `gmsh_jll` is resolved
+  into a project of its own under the package's scratch space on first use (one download,
+  needs network) and run as a subprocess. Set `ENV["TANDEM_GMSH"]` to a `gmsh` binary, or put
+  one on `PATH`, to use that instead. `Tandem.needs_external_gmsh(e)` says which examples are
+  affected.
 * **BLAS.** The binaries link libblastrampoline, which needs a backing library in a bare
   subprocess — and two of them, since PETSc is built with 64-bit indices (ILP64) while MUMPS
   and ScaLAPACK call LP64. The package registers Julia's `libopenblas64_` alongside

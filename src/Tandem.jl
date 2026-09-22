@@ -15,13 +15,14 @@ list and links.
 module Tandem
 
 using Tandem_jll, gmsh_jll, OpenBLAS32_jll
+using Scratch
 
 # gmsh_jll 4.10+ requires HDF5_jll < 2 while Tandem_jll requires >= 2.2.2, so the only
 # version that can share an environment with the tandem binaries is 4.9.3 -- which ships
 # libgmsh but no `gmsh` executable. Drive the library in process instead.
 include(gmsh_jll.gmsh_api)
 
-export run_tandem, run_static, run_example, TandemResult
+export run_tandem, run_static, run_model, run_example, list_examples, TandemResult
 
 const DIMENSIONS = (2, 3)
 const DEGREES = (1, 2, 3)
@@ -245,11 +246,82 @@ run_static(config; kwargs...) = run_model(config; app = :static, kwargs...)
 # ---------------------------------------------------------------------------
 
 """
+    external_gmsh() -> Union{String,Nothing}
+
+Path to a `gmsh` executable the user supplied, from `ENV["TANDEM_GMSH"]` or from
+`PATH`. Takes precedence over both the bundled library and the private install that
+[`gmsh_executable`](@ref) provisions.
+"""
+function external_gmsh()
+    e = get(ENV, "TANDEM_GMSH", "")
+    isempty(e) && return Sys.which("gmsh")
+    isfile(e) || throw(ArgumentError("TANDEM_GMSH is set to $e, which is not a file"))
+    return e
+end
+
+"Whether a .geo needs the OpenCASCADE kernel, which the bundled gmsh lacks."
+needs_occ(geo::AbstractString) = occursin("OpenCASCADE", read(geo, String))
+
+const GMSH_EXE = Ref{Union{String,Nothing}}(nothing)
+const GMSH_LIBPATH = Ref{Vector{String}}(String[])
+
+"""
+    gmsh_executable(; install = true) -> Union{String,Nothing}
+
+Path to a gmsh binary that supports the OpenCASCADE kernel, or `nothing` if none can
+be obtained.
+
+`gmsh_jll` 4.10 and newer require `HDF5_jll < 2` while `Tandem_jll` requires 2.2.2 or
+newer, so the version this package can load directly is 4.9.3 -- which is built
+without OCC. Six of the bundled geometries need it, including the 3D SEAS benchmarks
+BP5 and TPV102.
+
+Rather than make those unreachable, a current `gmsh_jll` is resolved into a project
+of its own under this package's scratch space, where the HDF5 conflict cannot arise,
+and its executable is used as a subprocess. That happens once, on first use, and
+needs network access; set `install = false` to check availability without it, or set
+`ENV["TANDEM_GMSH"]` to skip it entirely.
+"""
+function gmsh_executable(; install::Bool = true)
+    e = external_gmsh()
+    e === nothing || return e
+    GMSH_EXE[] === nothing || return GMSH_EXE[]
+
+    dir = @get_scratch!("gmsh")
+    stamp = joinpath(dir, "resolved.txt")
+    if !isfile(stamp)
+        install || return nothing
+        script = joinpath(dir, "resolve.jl")
+        write(script, """
+            using Pkg
+            Pkg.add("gmsh_jll"; io = devnull)
+            using gmsh_jll
+            open(ARGS[1], "w") do io
+                println(io, gmsh_jll.gmsh_path)
+                foreach(p -> println(io, p), gmsh_jll.LIBPATH_list)
+            end
+            """)
+        cmd = `$(Base.julia_cmd()) --startup-file=no --project=$dir $script $stamp`
+        ok = success(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
+        (ok && isfile(stamp)) || return nothing
+    end
+    lines = filter(!isempty, strip.(readlines(stamp)))
+    isempty(lines) && return nothing
+    isfile(first(lines)) || return nothing
+    GMSH_LIBPATH[] = String.(lines[2:end])
+    return GMSH_EXE[] = String(first(lines))
+end
+
+"""
     generate_mesh(geo; output = nothing, dim = 2, order = 1, format = "msh2",
                   options = Dict(), verbose = false)
 
-Build a `.msh` mesh from a gmsh `.geo` file and return its path. gmsh is driven
-through its library API in this process, so no `gmsh` executable is needed.
+Build a `.msh` mesh from a gmsh `.geo` file and return its path.
+
+gmsh is driven through its library API in this process, so no `gmsh` executable is
+normally needed. Geometries built on the **OpenCASCADE** kernel are the exception and
+go through [`gmsh_executable`](@ref); a `gmsh` in `ENV["TANDEM_GMSH"]` or on `PATH`
+is used in preference to either.
 
 tandem reads MSH 2.2, so `format` defaults to `"msh2"`; newer formats are not
 parsed. `order = 2` asks gmsh for curvilinear elements, which tandem supports and
@@ -266,6 +338,33 @@ function generate_mesh(geo::AbstractString; output = nothing, dim::Integer = 2,
     msh = output === nothing ? string(first(splitext(abspath(geo))), ".msh") :
           abspath(String(output))
     mkpath(dirname(msh))
+
+    ext = needs_occ(geo) ? gmsh_executable() : external_gmsh()
+    if ext !== nothing
+        argv = String[ext, "-$(dim)", abspath(geo), "-o", msh, "-format", format,
+                      "-order", string(order)]
+        for (k, v) in pairs(options)
+            append!(argv, ["-setnumber", string(k), string(v)])
+        end
+        buf = IOBuffer()
+        libkey = Tandem_jll.JLLWrappers.LIBPATH_env
+        env = Dict(libkey => join(filter(!isempty,
+                                  vcat(GMSH_LIBPATH[], get(ENV, libkey, ""))), PATHSEP))
+        cmd = addenv(Cmd(Cmd(argv); dir = dirname(abspath(geo))), env)
+        pr = run(pipeline(ignorestatus(cmd); stdout = verbose ? stdout : buf,
+                          stderr = verbose ? stderr : buf))
+        pr.exitcode == 0 || error("gmsh failed with code $(pr.exitcode)\n" * String(take!(buf)))
+        isfile(msh) || error("gmsh reported success but produced no mesh at $msh")
+        return msh
+    end
+
+    needs_occ(geo) && error("""
+        $(basename(geo)) needs gmsh's OpenCASCADE kernel, which the gmsh library this
+        package can load (4.9.3, pinned by Tandem_jll's HDF5 requirement) lacks, and a
+        current gmsh could not be provisioned -- see `Tandem.gmsh_executable`.
+
+        Install gmsh and put it on PATH or in ENV["TANDEM_GMSH"], or retry with network
+        access. Examples whose TOML has a [generate_mesh] block need no gmsh at all.""")
 
     # `-setnumber` has no API call in gmsh 4.9; passing it through initialize's argv is
     # the supported equivalent, and is what sets a geometry's DefineConstant values.
@@ -348,6 +447,15 @@ end
 
 "Whether this example can be run as bundled -- see [`Example`](@ref)."
 runnable(e::Example) = e.generate_mesh || e.mesh !== nothing || e.geo !== nothing
+
+"""
+    needs_external_gmsh(e) -> Bool
+
+Whether this example's geometry uses gmsh's OpenCASCADE kernel, which the gmsh
+library this package loads directly lacks. Meshing it goes through
+[`gmsh_executable`](@ref), which provisions a current gmsh on first use.
+"""
+needs_external_gmsh(e::Example) = e.geo !== nothing && needs_occ(e.geo)
 
 function Base.show(io::IO, e::Example)
     print(io, "Example(\"", e.name, "\", ", e.app, ", ", e.dim, "D, ",
@@ -465,7 +573,13 @@ function prepare(name; dir::AbstractString = mktempdir())
     for f in readdir(src)
         isfile(joinpath(src, f)) && cp(joinpath(src, f), joinpath(dir, f); force = true)
     end
+    # tandem validates output prefixes against the filesystem and refuses to start if
+    # the directory is missing, so create one per `prefix = "..."` in the parameter file.
     mkpath(joinpath(dir, "output"))
+    for m in eachmatch(r"(?m)^\s*prefix\s*=\s*[\"']([^\"']+)[\"']", read(e.toml, String))
+        d = dirname(m[1])
+        isempty(d) || mkpath(joinpath(dir, d))
+    end
     if e.geo !== nothing
         generate_mesh(joinpath(dir, basename(e.geo));
                       output = joinpath(dir, something(e.mesh_file, "mesh.msh")),

@@ -2,8 +2,8 @@
 # See README.md for the authors and the paper to cite. The example problems exercised
 # here are theirs.
 #
-# The 3D benchmarks and BP6 are slow enough to be awkward on a CI runner, so they are
-# gated behind TANDEM_HEAVY_TESTS=true. Everything else runs by default.
+# The 3D SEAS benchmarks and BP6 are slow enough to be awkward on a CI runner, so they
+# are gated behind TANDEM_HEAVY_TESTS=true. Everything else runs by default.
 
 using Test, Tandem
 
@@ -55,11 +55,30 @@ end
     @test occursin("2.2", first(eachline(msh), 2)[2])
     @test_throws ArgumentError Tandem.generate_mesh(joinpath(d, "absent.geo"))
 
+    # Six geometries use gmsh's OpenCASCADE kernel, which the loadable gmsh lacks;
+    # those go through a separately provisioned binary.
+    occ = [e.name for e in list_examples() if Tandem.needs_external_gmsh(e)]
+    @test "tandem/3d/bp5" in occ
+    if Tandem.gmsh_executable() === nothing
+        @info "no OpenCASCADE-capable gmsh available; skipping those geometries"
+    else
+        occ_msh = Tandem.generate_mesh(
+            joinpath(Tandem.examples_dir(), "poisson", "2d", "circular_hole.geo");
+            output = joinpath(d, "circular_hole.msh"))
+        @test isfile(occ_msh)
+    end
+
     # prepare() must leave a directory tandem can be pointed straight at
     wd, toml = Tandem.prepare("tandem/2d/bp3")
     @test isfile(toml) && isdir(joinpath(wd, "output"))
     @test isfile(joinpath(wd, "bp3.msh"))
     @test_throws ErrorException Tandem.prepare("tandem/2d/bp1")
+
+    # tandem validates output prefixes against the filesystem before it starts, so
+    # every directory an example's prefixes name must exist after prepare().
+    wd6, _ = Tandem.prepare("tandem/2d/BP6/bp6_A")
+    @test isdir(joinpath(wd6, "outputs_A_250m"))
+    @test isdir(joinpath(wd6, "GreensFunctions"))
 end
 
 # https://tandem.readthedocs.io/en/latest/getting-started/examples.html
@@ -131,14 +150,26 @@ end
     end
 end
 
-@testset "SEAS benchmarks (3D)" begin
-    if !HEAVY
-        @info "skipping 3D benchmarks; set TANDEM_HEAVY_TESTS=true to run them"
-    else
-        for name in ("tandem/3d/bp5", "tandem/3d/tpv102")
-            @testset "$name" begin
-                r = run_example(name; petsc = ["-ts_max_steps", "2"])
-                @test success(r)
+@testset "3D" begin
+    # Meshed internally by tandem, so these need no gmsh and cost under a second.
+    for name in ("tandem/3d/mms5", "tandem/3d/plane_wave")
+        @testset "$name" begin
+            r = run_example(name; petsc = ["-ts_max_steps", "2"])
+            @test success(r)
+        end
+    end
+
+    @testset "SEAS benchmarks" begin
+        if !HEAVY
+            @info "skipping 3D SEAS benchmarks; set TANDEM_HEAVY_TESTS=true to run them"
+        elseif Tandem.gmsh_executable() === nothing
+            @info "skipping 3D SEAS benchmarks: no OpenCASCADE-capable gmsh"
+        else
+            for name in ("tandem/3d/bp5", "tandem/3d/tpv102")
+                @testset "$name" begin
+                    r = run_example(name; petsc = ["-ts_max_steps", "2"])
+                    @test success(r)
+                end
             end
         end
     end
