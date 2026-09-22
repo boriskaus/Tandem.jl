@@ -121,10 +121,14 @@ bound them with `-ts_max_steps` unless you mean to run the whole sequence):
 | `tandem/3d/tpv102` | SCEC dynamic-rupture benchmark TPV102, run quasi-dynamically |
 | `tandem/2d/mms1`, `mms3`, `tandem/3d/mms5`, `3d/plane_wave` | Manufactured solutions, for verifying convergence rates |
 
-> The 3D benchmarks **BP5** and **TPV102** are large: most of their cost is mesh partitioning
-> and operator assembly, which `-ts_max_steps` does not bound, so even a two-step run takes
-> well over half an hour on one core. They are meant for `ranks = 10` and upwards. The 2D
-> benchmarks and the manufactured solutions run in seconds to minutes.
+> The 3D benchmarks **BP5** and **TPV102** are sized for a cluster, so CI does not run them. Most of their cost is mesh
+> partitioning and operator assembly, which `-ts_max_steps` does not bound: a two-step BP5 does
+> not finish in 40 minutes on one core, but takes 4.5 minutes on 16 (`ranks = 16`); TPV102 goes
+> from likewise-unfinished to 3 seconds. Pass `ranks`. The 2D benchmarks and the manufactured
+> solutions run serially in seconds to minutes.
+>
+> The test suite gates BP5, TPV102 and BP6 behind `TANDEM_HEAVY_TESTS=true`; run that locally
+> on a machine with cores to spare, not on a hosted runner.
 
 **Static problems** (`app = :static`): `poisson/` and `elasticity/` hold manufactured
 solutions (`cosine`, `manufactured`), embedded-boundary and singular cases, and geometry-driven

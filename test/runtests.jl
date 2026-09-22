@@ -165,9 +165,13 @@ end
         elseif Tandem.gmsh_executable() === nothing
             @info "skipping 3D SEAS benchmarks: no OpenCASCADE-capable gmsh"
         else
-            for name in ("tandem/3d/bp5", "tandem/3d/tpv102")
+            # These are sized for a cluster: on one core BP5 does not finish two
+            # steps in 40 minutes, while on 16 it takes under five.
+            ranks = clamp(Sys.CPU_THREADS, 1, 16)
+            @info "running the 3D SEAS benchmarks on $ranks rank(s)"
+            for name in ("tandem/3d/tpv102", "tandem/3d/bp5")
                 @testset "$name" begin
-                    r = run_example(name; petsc = ["-ts_max_steps", "2"])
+                    r = run_example(name; ranks, petsc = ["-ts_max_steps", "2"])
                     @test success(r)
                 end
             end
