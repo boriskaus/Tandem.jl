@@ -3,8 +3,8 @@
 Run [**tandem**](https://github.com/TEAR-ERC/tandem) earthquake-cycle simulations from Julia,
 on Linux, macOS and Windows, with nothing to compile.
 
-tandem is a scalable discontinuous-Galerkin code on unstructured curvilinear grids for linear
-elasticity and for **SEAS** — sequences of earthquakes and aseismic slip. This package wraps
+**tandem** is a scalable discontinuous-Galerkin code on unstructured curvilinear grids for
+linear elasticity and for **SEAS** — sequences of earthquakes and aseismic slip. This package wraps
 the cross-compiled binaries in [`tandem_jll`](https://github.com/boriskaus/tandem_jll.jl),
 handles the environment they need, builds meshes through gmsh, and ships tandem's own example
 problems so that a first simulation is one function call.
@@ -38,6 +38,14 @@ Pkg.add(url = "https://github.com/boriskaus/tandem.jl")
 
 Once `tandem_jll` is registered the first line becomes unnecessary.
 
+The package is spelled **`tandem`**, lowercase, the way upstream spells the code — so it is
+`using tandem`, not `using Tandem`.
+
+> Throughout this README, **tandem** in bold is the upstream simulation code, `tandem` in code
+> font is this Julia module, and `tandem` as an *app* is one of the two executables (the SEAS
+> time-integrator, as opposed to `static`). Example names such as `tandem/2d/bp1_sym` are paths
+> inside tandem's own `examples/` tree.
+
 ## Getting started
 
 ```julia
@@ -70,9 +78,9 @@ r.l2_error     # 3.2e-5
 
 | Function | Purpose |
 | --- | --- |
-| `run_tandem(config; …)` | Run the SEAS time-integrator (`tandem`) on a TOML parameter file. |
-| `run_static(config; …)` | Run the static elliptic solver (`static`) on a TOML parameter file. |
-| `run_model(config; app, …)` | The common implementation behind both; pick the app explicitly. |
+| `run_tandem(config; …)` | Run the `tandem` executable — the SEAS time-integrator — on a TOML parameter file. |
+| `run_static(config; …)` | Run the `static` executable — the static elliptic solver — on a TOML parameter file. |
+| `run_model(config; app, …)` | The common implementation behind both; pass `app = :tandem` or `:static`. |
 | `run_example(name; …)` | Prepare and run one of the bundled examples. |
 | `list_examples()` / `tandem.example(name)` | The bundled examples and how each one gets its mesh. |
 | `tandem.prepare(name; dir)` | Copy an example into a working directory and build its mesh, without running. |
@@ -98,7 +106,7 @@ A run returns a `TandemResult`: `exitcode`, `log`, and — when tandem printed t
 
 ### Degrees and dimensions
 
-tandem compiles the spatial dimension and the polynomial degree into the binary, so
+**tandem** compiles the spatial dimension and the polynomial degree into each binary, so
 `tandem_jll` ships twelve executables: `{tandem, static}` × `{2D, 3D}` × `p1, p2, p3`.
 `dim` must match the problem; `degree` is yours to choose, and higher degrees converge faster
 per degree of freedom on smooth solutions.
@@ -109,8 +117,8 @@ per degree of freedom on smooth solutions.
 so the configurations match the binaries. `list_examples()` returns all 31 with the app, the
 dimension and how the mesh is obtained.
 
-**SEAS benchmarks** (`app = :tandem` — these integrate for thousands of simulated years, so
-bound them with `-ts_max_steps` unless you mean to run the whole sequence):
+**SEAS benchmarks** (run with the `tandem` app — these integrate for thousands of simulated
+years, so bound them with `-ts_max_steps` unless you mean to run the whole sequence):
 
 | Example | Description |
 | --- | --- |
@@ -130,7 +138,7 @@ bound them with `-ts_max_steps` unless you mean to run the whole sequence):
 > The test suite gates BP5, TPV102 and BP6 behind `TANDEM_HEAVY_TESTS=true`; run that locally
 > on a machine with cores to spare, not on a hosted runner.
 
-**Static problems** (`app = :static`): `poisson/` and `elasticity/` hold manufactured
+**Static problems** (run with the `static` app): `poisson/` and `elasticity/` hold manufactured
 solutions (`cosine`, `manufactured`), embedded-boundary and singular cases, and geometry-driven
 setups (`circular_hole`, `spherical_hole`, `wedge`, `dip`, `beam`).
 
@@ -139,11 +147,11 @@ geometry to build one from. `tandem.runnable(e)` reports this.
 
 ## Notes
 
-* **Meshes.** Examples whose TOML has a `[generate_mesh]` block need no mesh step — tandem
+* **Meshes.** Examples whose TOML has a `[generate_mesh]` block need no mesh step — **tandem**
   builds the mesh itself. The rest are meshed from a gmsh `.geo`, which `tandem.prepare` and
-  `run_example` do for you. `generate_mesh` writes MSH 2.2, the format tandem parses.
-  `tandem.prepare` also creates every directory named by an output `prefix` in the parameter
-  file, which tandem validates before it will start.
+  `run_example` do for you, writing MSH 2.2, the only format **tandem** parses. `tandem.prepare`
+  also creates every directory named by an output `prefix` in the parameter file, because
+  **tandem** validates those against the filesystem before it will start.
 * **gmsh.** Most geometries are meshed through the gmsh library in-process. Six use gmsh's
   **OpenCASCADE** kernel — including the 3D benchmarks BP5 and TPV102 — which the loadable
   version lacks: gmsh_jll 4.10 and newer require HDF5_jll < 2 while `tandem_jll` requires
@@ -159,7 +167,7 @@ geometry to build one from. `tandem.runnable(e)` reports this.
 * **Stack size.** Large 3D models can exhaust the default 8 MiB stack. On Linux and macOS,
   raise it in the shell you start Julia from: `ulimit -s unlimited`.
 * **Lua.** Scenario parameters (friction, material properties, initial conditions) are Lua
-  functions in a `.lua` file next to the TOML; tandem calls them per quadrature point. Editing
+  functions in a `.lua` file next to the TOML; **tandem** calls them per quadrature point. Editing
   that file is how you change a model without recompiling.
 
 ## Related
