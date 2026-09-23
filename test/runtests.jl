@@ -5,78 +5,81 @@
 # The 3D SEAS benchmarks and BP6 are slow enough to be awkward on a CI runner, so they
 # are gated behind TANDEM_HEAVY_TESTS=true. Everything else runs by default.
 
-using Test, Tandem
+using Test, tandem
 
 const HEAVY = get(ENV, "TANDEM_HEAVY_TESTS", "false") == "true"
 const STEPS = ["-ts_max_steps", get(ENV, "TANDEM_MAX_STEPS", "5")]
 
-@testset "Tandem.jl" begin
+@testset "tandem.jl" begin
 
 @testset "binaries" begin
-    for (app, dim, deg) in Tandem.executables()
-        @test isfile(Tandem.executable(app, dim, deg))
+    for (app, dim, deg) in tandem.executables()
+        @test isfile(tandem.executable(app, dim, deg))
     end
-    @test_throws ArgumentError Tandem.executable(:nope, 2, 2)
-    @test_throws ArgumentError Tandem.executable(:tandem, 4, 2)
-    @test_throws ArgumentError Tandem.executable(:tandem, 2, 7)
-    @test isfile(Tandem.mpiexec_path())
-    env = Tandem.child_env()
+    @test_throws ArgumentError tandem.executable(:nope, 2, 2)
+    @test_throws ArgumentError tandem.executable(:tandem, 4, 2)
+    @test_throws ArgumentError tandem.executable(:tandem, 2, 7)
+    @test isfile(tandem.mpiexec_path())
+    env = tandem.child_env()
     @test occursin(";", env["LBT_DEFAULT_LIBS"])          # ILP64 and LP64, not one of them
     @test env["OMP_NUM_THREADS"] == "1"
 end
 
 @testset "examples catalogue" begin
-    ex = Tandem.list_examples()
+    ex = tandem.list_examples()
     @test length(ex) >= 30
     @test all(isfile(e.toml) for e in ex)
     # Every example is runnable as bundled except bp1, for which upstream ships no mesh.
-    @test [e.name for e in ex if !Tandem.runnable(e)] == ["tandem/2d/bp1"]
+    @test [e.name for e in ex if !tandem.runnable(e)] == ["tandem/2d/bp1"]
 
-    bp1 = Tandem.example("bp1_sym")
+    bp1 = tandem.example("bp1_sym")
     @test bp1.name == "tandem/2d/bp1_sym"
     @test bp1.app === :tandem && bp1.dim == 2
     @test bp1.mesh_file == "bp1_sym.msh" && bp1.geo !== nothing
-    @test Tandem.example("poisson/2d/cosine").app === :static
-    @test Tandem.example("tandem/3d/bp5").dim == 3
-    @test Tandem.example("mms5").generate_mesh                 # meshed by tandem itself
-    @test Tandem.example("bp6_A").mesh_order == 2              # curvilinear, per upstream
-    @test_throws ArgumentError Tandem.example("no-such-example")
-    @test_throws ArgumentError Tandem.example("cosine")        # ambiguous across families
-    @test_throws ArgumentError Tandem.options_file("nope")
-    @test isfile(Tandem.options_file("lu_mumps"))
+    @test tandem.example("poisson/2d/cosine").app === :static
+    @test tandem.example("tandem/3d/bp5").dim == 3
+    @test tandem.example("mms5").generate_mesh                 # meshed by tandem itself
+    @test tandem.example("bp6_A").mesh_order == 2              # curvilinear, per upstream
+    @test_throws ArgumentError tandem.example("no-such-example")
+    @test_throws ArgumentError tandem.example("cosine")        # ambiguous across families
+    @test_throws ArgumentError tandem.options_file("nope")
+    @test isfile(tandem.options_file("lu_mumps"))
 end
 
 @testset "mesh generation" begin
     d = mktempdir()
-    geo = joinpath(Tandem.examples_dir(), "tandem", "2d", "bp1_sym.geo")
-    msh = Tandem.generate_mesh(geo; output = joinpath(d, "bp1_sym.msh"))
+    geo = joinpath(tandem.examples_dir(), "tandem", "2d", "bp1_sym.geo")
+    msh = tandem.generate_mesh(geo; output = joinpath(d, "bp1_sym.msh"))
     @test isfile(msh)
     # tandem parses MSH 2.2 only; a msh4 header here means silent failure downstream.
     @test occursin("2.2", first(eachline(msh), 2)[2])
-    @test_throws ArgumentError Tandem.generate_mesh(joinpath(d, "absent.geo"))
+    @test_throws ArgumentError tandem.generate_mesh(joinpath(d, "absent.geo"))
 
     # Six geometries use gmsh's OpenCASCADE kernel, which the loadable gmsh lacks;
     # those go through a separately provisioned binary.
-    occ = [e.name for e in list_examples() if Tandem.needs_external_gmsh(e)]
+    occ = [e.name for e in list_examples() if tandem.needs_external_gmsh(e)]
     @test "tandem/3d/bp5" in occ
-    if Tandem.gmsh_executable() === nothing
-        @info "no OpenCASCADE-capable gmsh available; skipping those geometries"
+    # @test_skip rather than an `if`, so a missing gmsh shows up in the summary as a
+    # skip instead of quietly changing the test count.
+    if tandem.gmsh_executable() === nothing
+        @warn "no OpenCASCADE-capable gmsh; skipping those geometries"
+        @test_skip isfile("circular_hole.msh")
     else
-        occ_msh = Tandem.generate_mesh(
-            joinpath(Tandem.examples_dir(), "poisson", "2d", "circular_hole.geo");
+        occ_msh = tandem.generate_mesh(
+            joinpath(tandem.examples_dir(), "poisson", "2d", "circular_hole.geo");
             output = joinpath(d, "circular_hole.msh"))
         @test isfile(occ_msh)
     end
 
     # prepare() must leave a directory tandem can be pointed straight at
-    wd, toml = Tandem.prepare("tandem/2d/bp3")
+    wd, toml = tandem.prepare("tandem/2d/bp3")
     @test isfile(toml) && isdir(joinpath(wd, "output"))
     @test isfile(joinpath(wd, "bp3.msh"))
-    @test_throws ErrorException Tandem.prepare("tandem/2d/bp1")
+    @test_throws ErrorException tandem.prepare("tandem/2d/bp1")
 
     # tandem validates output prefixes against the filesystem before it starts, so
     # every directory an example's prefixes name must exist after prepare().
-    wd6, _ = Tandem.prepare("tandem/2d/BP6/bp6_A")
+    wd6, _ = tandem.prepare("tandem/2d/BP6/bp6_A")
     @test isdir(joinpath(wd6, "outputs_A_250m"))
     @test isdir(joinpath(wd6, "GreensFunctions"))
 end
@@ -100,7 +103,7 @@ end
     @testset "MUMPS direct solve" begin
         it = run_example("elasticity/2d/cosine"; degree = 2)
         lu = run_example("elasticity/2d/cosine"; degree = 2,
-                         petsc = ["-options_file", Tandem.options_file("lu_mumps")])
+                         petsc = ["-options_file", tandem.options_file("lu_mumps")])
         @test success(lu)
         @test lu.iterations == 1
         @test lu.l2_error !== nothing && it.l2_error !== nothing
@@ -121,7 +124,7 @@ end
     end
 
     @testset "output files" begin
-        wd, _ = Tandem.prepare("poisson/2d/cosine")
+        wd, _ = tandem.prepare("poisson/2d/cosine")
         r = run_model("cosine.toml"; app = :static, dim = 2, degree = 2,
                       dir = wd, output = "output/cosine")
         @test success(r)
@@ -162,7 +165,7 @@ end
     @testset "SEAS benchmarks" begin
         if !HEAVY
             @info "skipping 3D SEAS benchmarks; set TANDEM_HEAVY_TESTS=true to run them"
-        elseif Tandem.gmsh_executable() === nothing
+        elseif tandem.gmsh_executable() === nothing
             @info "skipping 3D SEAS benchmarks: no OpenCASCADE-capable gmsh"
         else
             # These are sized for a cluster: on one core BP5 does not finish two
@@ -189,7 +192,7 @@ end
 end
 
 @testset "error handling" begin
-    wd, _ = Tandem.prepare("poisson/2d/cosine")
+    wd, _ = tandem.prepare("poisson/2d/cosine")
     @test_throws ArgumentError run_static("absent.toml"; dir = wd)
     @test_throws ArgumentError run_static("cosine.toml"; dir = wd, ranks = 0)
     bad = run_static("cosine.toml"; dir = wd, check = false, petsc = ["-nonsense_option_xyz"])

@@ -1,4 +1,4 @@
-# Tandem.jl
+# tandem.jl
 
 Run [**tandem**](https://github.com/TEAR-ERC/tandem) earthquake-cycle simulations from Julia,
 on Linux, macOS and Windows, with nothing to compile.
@@ -33,7 +33,7 @@ to be added explicitly:
 ```julia
 using Pkg
 Pkg.add(url = "https://github.com/boriskaus/Tandem_jll.jl")
-Pkg.add(url = "https://github.com/boriskaus/Tandem.jl")
+Pkg.add(url = "https://github.com/boriskaus/tandem.jl")
 ```
 
 Once `Tandem_jll` is registered the first line becomes unnecessary.
@@ -41,7 +41,7 @@ Once `Tandem_jll` is registered the first line becomes unnecessary.
 ## Getting started
 
 ```julia
-using Tandem
+using tandem
 
 # SEAS benchmark BP1, bounded to 20 time steps so it returns in a minute
 r = run_example("tandem/2d/bp1_sym"; petsc = ["-ts_max_steps", "20"])
@@ -74,12 +74,12 @@ r.l2_error     # 3.2e-5
 | `run_static(config; …)` | Run the static elliptic solver (`static`) on a TOML parameter file. |
 | `run_model(config; app, …)` | The common implementation behind both; pick the app explicitly. |
 | `run_example(name; …)` | Prepare and run one of the bundled examples. |
-| `list_examples()` / `Tandem.example(name)` | The bundled examples and how each one gets its mesh. |
-| `Tandem.prepare(name; dir)` | Copy an example into a working directory and build its mesh, without running. |
-| `Tandem.generate_mesh(geo; …)` | Build a `.msh` from a gmsh `.geo` file. |
-| `Tandem.gmsh_executable()` | The gmsh binary used for OpenCASCADE geometries. |
-| `Tandem.examples_dir()` | Path to the bundled copy of tandem's `examples/`. |
-| `Tandem.executable(app, dim, degree)` | Path to one of the 12 binaries, for direct use. |
+| `list_examples()` / `tandem.example(name)` | The bundled examples and how each one gets its mesh. |
+| `tandem.prepare(name; dir)` | Copy an example into a working directory and build its mesh, without running. |
+| `tandem.generate_mesh(geo; …)` | Build a `.msh` from a gmsh `.geo` file. |
+| `tandem.gmsh_executable()` | The gmsh binary used for OpenCASCADE geometries. |
+| `tandem.examples_dir()` | Path to the bundled copy of tandem's `examples/`. |
+| `tandem.executable(app, dim, degree)` | Path to one of the 12 binaries, for direct use. |
 
 Common keyword arguments to the run functions:
 
@@ -135,14 +135,14 @@ solutions (`cosine`, `manufactured`), embedded-boundary and singular cases, and 
 setups (`circular_hole`, `spherical_hole`, `wedge`, `dip`, `beam`).
 
 `tandem/2d/bp1` is listed but cannot be run as bundled: upstream ships neither its mesh nor a
-geometry to build one from. `Tandem.runnable(e)` reports this.
+geometry to build one from. `tandem.runnable(e)` reports this.
 
 ## Notes
 
 * **Meshes.** Examples whose TOML has a `[generate_mesh]` block need no mesh step — tandem
-  builds the mesh itself. The rest are meshed from a gmsh `.geo`, which `Tandem.prepare` and
+  builds the mesh itself. The rest are meshed from a gmsh `.geo`, which `tandem.prepare` and
   `run_example` do for you. `generate_mesh` writes MSH 2.2, the format tandem parses.
-  `Tandem.prepare` also creates every directory named by an output `prefix` in the parameter
+  `tandem.prepare` also creates every directory named by an output `prefix` in the parameter
   file, which tandem validates before it will start.
 * **gmsh.** Most geometries are meshed through the gmsh library in-process. Six use gmsh's
   **OpenCASCADE** kernel — including the 3D benchmarks BP5 and TPV102 — which the loadable
@@ -150,7 +150,7 @@ geometry to build one from. `Tandem.runnable(e)` reports this.
   ≥ 2.2.2, leaving only 4.9.3, built without OCC. For those, a current `gmsh_jll` is resolved
   into a project of its own under the package's scratch space on first use (one download,
   needs network) and run as a subprocess. Set `ENV["TANDEM_GMSH"]` to a `gmsh` binary, or put
-  one on `PATH`, to use that instead. `Tandem.needs_external_gmsh(e)` says which examples are
+  one on `PATH`, to use that instead. `tandem.needs_external_gmsh(e)` says which examples are
   affected.
 * **BLAS.** The binaries link libblastrampoline, which needs a backing library in a bare
   subprocess — and two of them, since PETSc is built with 64-bit indices (ILP64) while MUMPS

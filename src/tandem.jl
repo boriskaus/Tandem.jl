@@ -1,5 +1,5 @@
 """
-    Tandem
+    tandem
 
 Run [tandem](https://github.com/TEAR-ERC/tandem) simulations from Julia.
 
@@ -12,7 +12,7 @@ If you use tandem, cite Uphoff, May & Gabriel (2023), *Geophys. J. Int.* 233(1),
 586-626, <https://doi.org/10.1093/gji/ggac467>. See the README for the full author
 list and links.
 """
-module Tandem
+module tandem
 
 using Tandem_jll, gmsh_jll, OpenBLAS32_jll
 using Scratch
@@ -302,8 +302,16 @@ function gmsh_executable(; install::Bool = true)
             end
             """)
         cmd = `$(Base.julia_cmd()) --startup-file=no --project=$dir $script $stamp`
-        ok = success(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
-        (ok && isfile(stamp)) || return nothing
+        buf = IOBuffer()
+        pr = run(pipeline(ignorestatus(cmd); stdout = buf, stderr = buf))
+        if pr.exitcode != 0 || !isfile(stamp)
+            # Silence here once cost a CI run: the OpenCASCADE geometries were skipped
+            # with no indication of why. Say what happened, then carry on without gmsh.
+            @warn """Could not provision a gmsh with OpenCASCADE support; geometries \
+                     that need it cannot be meshed. Set ENV["TANDEM_GMSH"] to a gmsh \
+                     binary to bypass this.""" exitcode=pr.exitcode dir output=String(take!(buf))
+            return nothing
+        end
     end
     lines = filter(!isempty, strip.(readlines(stamp)))
     isempty(lines) && return nothing
@@ -361,7 +369,7 @@ function generate_mesh(geo::AbstractString; output = nothing, dim::Integer = 2,
     needs_occ(geo) && error("""
         $(basename(geo)) needs gmsh's OpenCASCADE kernel, which the gmsh library this
         package can load (4.9.3, pinned by Tandem_jll's HDF5 requirement) lacks, and a
-        current gmsh could not be provisioned -- see `Tandem.gmsh_executable`.
+        current gmsh could not be provisioned -- see `tandem.gmsh_executable`.
 
         Install gmsh and put it on PATH or in ENV["TANDEM_GMSH"], or retry with network
         access. Examples whose TOML has a [generate_mesh] block need no gmsh at all.""")
@@ -595,7 +603,7 @@ end
 everything else is forwarded to [`run_model`](@ref).
 
 ```julia
-using Tandem
+using tandem
 r = run_example("tandem/2d/bp1_sym"; petsc = ["-ts_max_steps", "20"])
 ```
 """
