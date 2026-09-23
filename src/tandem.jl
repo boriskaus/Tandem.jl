@@ -5,7 +5,7 @@ Run [tandem](https://github.com/TEAR-ERC/tandem) simulations from Julia.
 
 tandem is a discontinuous-Galerkin code for sequences of earthquakes and aseismic
 slip (SEAS), developed by the TEAR-ERC group. This package wraps the cross-compiled
-binaries in `Tandem_jll`, sets up the environment they need, generates meshes with
+binaries in `tandem_jll`, sets up the environment they need, generates meshes with
 `gmsh_jll`, and ships tandem's own example problems.
 
 If you use tandem, cite Uphoff, May & Gabriel (2023), *Geophys. J. Int.* 233(1),
@@ -14,10 +14,10 @@ list and links.
 """
 module tandem
 
-using Tandem_jll, gmsh_jll, OpenBLAS32_jll
+using tandem_jll, gmsh_jll, OpenBLAS32_jll
 using Scratch
 
-# gmsh_jll 4.10+ requires HDF5_jll < 2 while Tandem_jll requires >= 2.2.2, so the only
+# gmsh_jll 4.10+ requires HDF5_jll < 2 while tandem_jll requires >= 2.2.2, so the only
 # version that can share an environment with the tandem binaries is 4.9.3 -- which ships
 # libgmsh but no `gmsh` executable. Drive the library in process instead.
 include(gmsh_jll.gmsh_api)
@@ -52,12 +52,12 @@ function backing_blas_libs()
     return join((ilp64, OpenBLAS32_jll.libopenblas_path), ";")
 end
 
-"The MPI JLL `Tandem_jll` was built against on this platform."
+"The MPI JLL `tandem_jll` was built against on this platform."
 function mpi_module()
     for sym in (:MPICH_jll, :OpenMPI_jll, :MPItrampoline_jll, :MicrosoftMPI_jll)
-        isdefined(Tandem_jll, sym) && return getproperty(Tandem_jll, sym)
+        isdefined(tandem_jll, sym) && return getproperty(tandem_jll, sym)
     end
-    error("Tandem_jll exposes no MPI implementation on this platform")
+    error("tandem_jll exposes no MPI implementation on this platform")
 end
 
 """
@@ -77,8 +77,8 @@ replacing) the inherited ones, the MPI launcher on `PATH`, a BLAS backing librar
 for libblastrampoline, and an OpenMP thread count.
 """
 function child_env(; threads::Integer = 1, extra = Dict{String,String}())
-    libkey = Tandem_jll.JLLWrappers.LIBPATH_env
-    libdirs = unique(vcat(Tandem_jll.LIBPATH_list..., mpi_module().LIBPATH_list...,
+    libkey = tandem_jll.JLLWrappers.LIBPATH_env
+    libdirs = unique(vcat(tandem_jll.LIBPATH_list..., mpi_module().LIBPATH_list...,
                           split(get(ENV, libkey, ""), PATHSEP)))
     bindirs = (dirname(mpiexec_path()), get(ENV, "PATH", ""))
     env = Dict{String,String}(
@@ -98,7 +98,7 @@ end
 """
     executable(app, dim, degree) -> String
 
-Path to one of the 12 binaries in `Tandem_jll`. `app` is `:tandem` (the SEAS
+Path to one of the 12 binaries in `tandem_jll`. `app` is `:tandem` (the SEAS
 time-integrator) or `:static` (the static solver), `dim` is 2 or 3 and `degree` is
 the polynomial degree 1, 2 or 3. Both are compiled in, which is why there is a
 binary per combination rather than a run-time flag.
@@ -107,10 +107,10 @@ function executable(app::Symbol, dim::Integer, degree::Integer)
     app in (:tandem, :static) || throw(ArgumentError("app must be :tandem or :static, got $app"))
     dim in DIMENSIONS || throw(ArgumentError("dim must be 2 or 3, got $dim"))
     degree in DEGREES || throw(ArgumentError("degree must be 1, 2 or 3, got $degree"))
-    return getproperty(Tandem_jll, Symbol(app, "_", dim, "d_p", degree))().exec[1]
+    return getproperty(tandem_jll, Symbol(app, "_", dim, "d_p", degree))().exec[1]
 end
 
-"All 12 (app, dim, degree) combinations `Tandem_jll` provides."
+"All 12 (app, dim, degree) combinations `tandem_jll` provides."
 executables() = [(app, d, p) for app in (:tandem, :static) for d in DIMENSIONS for p in DEGREES]
 
 # ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ const GMSH_LIBPATH = Ref{Vector{String}}(String[])
 Path to a gmsh binary that supports the OpenCASCADE kernel, or `nothing` if none can
 be obtained.
 
-`gmsh_jll` 4.10 and newer require `HDF5_jll < 2` while `Tandem_jll` requires 2.2.2 or
+`gmsh_jll` 4.10 and newer require `HDF5_jll < 2` while `tandem_jll` requires 2.2.2 or
 newer, so the version this package can load directly is 4.9.3 -- which is built
 without OCC. Six of the bundled geometries need it, including the 3D SEAS benchmarks
 BP5 and TPV102.
@@ -355,7 +355,7 @@ function generate_mesh(geo::AbstractString; output = nothing, dim::Integer = 2,
             append!(argv, ["-setnumber", string(k), string(v)])
         end
         buf = IOBuffer()
-        libkey = Tandem_jll.JLLWrappers.LIBPATH_env
+        libkey = tandem_jll.JLLWrappers.LIBPATH_env
         env = Dict(libkey => join(filter(!isempty,
                                   vcat(GMSH_LIBPATH[], get(ENV, libkey, ""))), PATHSEP))
         cmd = addenv(Cmd(Cmd(argv); dir = dirname(abspath(geo))), env)
@@ -368,7 +368,7 @@ function generate_mesh(geo::AbstractString; output = nothing, dim::Integer = 2,
 
     needs_occ(geo) && error("""
         $(basename(geo)) needs gmsh's OpenCASCADE kernel, which the gmsh library this
-        package can load (4.9.3, pinned by Tandem_jll's HDF5 requirement) lacks, and a
+        package can load (4.9.3, pinned by tandem_jll's HDF5 requirement) lacks, and a
         current gmsh could not be provisioned -- see `tandem.gmsh_executable`.
 
         Install gmsh and put it on PATH or in ENV["TANDEM_GMSH"], or retry with network
@@ -404,7 +404,7 @@ end
     examples_dir() -> String
 
 The bundled copy of tandem's `examples/` tree, taken verbatim from the commit
-`Tandem_jll` is built from. See `PROVENANCE.md` there.
+`tandem_jll` is built from. See `PROVENANCE.md` there.
 """
 examples_dir() = normpath(joinpath(@__DIR__, "..", "examples"))
 

@@ -5,7 +5,7 @@ on Linux, macOS and Windows, with nothing to compile.
 
 tandem is a scalable discontinuous-Galerkin code on unstructured curvilinear grids for linear
 elasticity and for **SEAS** — sequences of earthquakes and aseismic slip. This package wraps
-the cross-compiled binaries in [`Tandem_jll`](https://github.com/boriskaus/Tandem_jll.jl),
+the cross-compiled binaries in [`tandem_jll`](https://github.com/boriskaus/tandem_jll.jl),
 handles the environment they need, builds meshes through gmsh, and ships tandem's own example
 problems so that a first simulation is one function call.
 
@@ -26,17 +26,17 @@ problems so that a first simulation is one function call.
 
 ## Installation
 
-`Tandem_jll` is not yet in the General registry (the
+`tandem_jll` is not yet in the General registry (the
 [Yggdrasil recipe](https://github.com/JuliaPackaging/Yggdrasil) is still in review), so it has
 to be added explicitly:
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/boriskaus/Tandem_jll.jl")
+Pkg.add(url = "https://github.com/boriskaus/tandem_jll.jl")
 Pkg.add(url = "https://github.com/boriskaus/tandem.jl")
 ```
 
-Once `Tandem_jll` is registered the first line becomes unnecessary.
+Once `tandem_jll` is registered the first line becomes unnecessary.
 
 ## Getting started
 
@@ -99,13 +99,13 @@ A run returns a `TandemResult`: `exitcode`, `log`, and — when tandem printed t
 ### Degrees and dimensions
 
 tandem compiles the spatial dimension and the polynomial degree into the binary, so
-`Tandem_jll` ships twelve executables: `{tandem, static}` × `{2D, 3D}` × `p1, p2, p3`.
+`tandem_jll` ships twelve executables: `{tandem, static}` × `{2D, 3D}` × `p1, p2, p3`.
 `dim` must match the problem; `degree` is yours to choose, and higher degrees converge faster
 per degree of freedom on smooth solutions.
 
 ## Bundled examples
 
-`examples/` is a verbatim copy of tandem's own, from the commit `Tandem_jll` is built from,
+`examples/` is a verbatim copy of tandem's own, from the commit `tandem_jll` is built from,
 so the configurations match the binaries. `list_examples()` returns all 31 with the app, the
 dimension and how the mesh is obtained.
 
@@ -146,7 +146,7 @@ geometry to build one from. `tandem.runnable(e)` reports this.
   file, which tandem validates before it will start.
 * **gmsh.** Most geometries are meshed through the gmsh library in-process. Six use gmsh's
   **OpenCASCADE** kernel — including the 3D benchmarks BP5 and TPV102 — which the loadable
-  version lacks: gmsh_jll 4.10 and newer require HDF5_jll < 2 while `Tandem_jll` requires
+  version lacks: gmsh_jll 4.10 and newer require HDF5_jll < 2 while `tandem_jll` requires
   ≥ 2.2.2, leaving only 4.9.3, built without OCC. For those, a current `gmsh_jll` is resolved
   into a project of its own under the package's scratch space on first use (one download,
   needs network) and run as a subprocess. Set `ENV["TANDEM_GMSH"]` to a `gmsh` binary, or put
@@ -164,6 +164,6 @@ geometry to build one from. `tandem.runnable(e)` reports this.
 
 ## Related
 
-* [`Tandem_jll`](https://github.com/boriskaus/Tandem_jll.jl) — the binaries
-* [`test_Tandem_jll`](https://github.com/boriskaus/test_Tandem_jll) — tandem's own pytest
+* [`tandem_jll`](https://github.com/boriskaus/tandem_jll.jl) — the binaries
+* [`test_tandem_jll`](https://github.com/boriskaus/test_tandem_jll) — tandem's own pytest
   regression and convergence suite run against those binaries on Linux, macOS and Windows

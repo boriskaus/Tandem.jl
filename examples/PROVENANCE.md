@@ -5,7 +5,7 @@ Everything in this directory is copied verbatim from the `examples/` folder of
     https://github.com/TEAR-ERC/tandem
 
 at commit `b75f66692d299673bf85632ed71e2a7da71ff2e0` (v1.2.0) — the same commit
-`Tandem_jll` is built from, so the configurations match the binaries.
+`tandem_jll` is built from, so the configurations match the binaries.
 
 Copyright (c) 2020 Ludwig-Maximilians-Universität München, BSD-3-Clause.
 The licence is reproduced in `LICENSE-tandem.md`.
