@@ -29,8 +29,7 @@ problems so that a first simulation is one function call.
 
 ## Installation
 
-`tandem_jll` is not yet in the General registry (the
-[Yggdrasil recipe](https://github.com/JuliaPackaging/Yggdrasil) is still in review), so it has
+`tandem_jll` is not yet in the General registry, so it has
 to be added explicitly:
 
 ```julia
@@ -40,9 +39,6 @@ Pkg.add(url = "https://github.com/boriskaus/tandem.jl")
 ```
 
 Once `tandem_jll` is registered the first line becomes unnecessary.
-
-The package is spelled **`tandem`**, lowercase, the way upstream spells the code — so it is
-`using tandem`, not `using Tandem`.
 
 > Throughout this README, **tandem** in bold is the upstream simulation code, `tandem` in code
 > font is this Julia module, and `tandem` as an *app* is one of the two executables (the SEAS
