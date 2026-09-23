@@ -1,5 +1,8 @@
 # tandem.jl
 
+[![CI](https://github.com/boriskaus/tandem.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/boriskaus/tandem.jl/actions/workflows/CI.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+
 Run [**tandem**](https://github.com/TEAR-ERC/tandem) earthquake-cycle simulations from Julia,
 on Linux, macOS and Windows, with nothing to compile.
 
