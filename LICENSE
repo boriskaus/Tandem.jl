@@ -26,3 +26,10 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---
+
+The files under examples/ are redistributed from tandem
+(https://github.com/TEAR-ERC/tandem), copyright (c) 2020 Ludwig-Maximilians-
+Universität München and also BSD-3-Clause licensed. See examples/LICENSE-tandem.md
+for that licence and examples/PROVENANCE.md for the commit they were taken from.
